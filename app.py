@@ -340,7 +340,7 @@ def get_bar_color(class_name: str) -> str:
 def run_inference(model, image: Image.Image):
     import torch
     import torchvision.transforms.functional as F
-    import opencv-python-headless
+    from PIL import ImageDraw
     import numpy as np
     from torchvision.ops import nms
 
@@ -382,9 +382,19 @@ def run_inference(model, image: Image.Image):
         # Gambar bounding box manual
         color = tuple(int(get_bar_color(cls_name).lstrip("#")[i:i+2], 16) for i in (0, 2, 4))
         x1, y1, x2, y2 = map(int, bbox)
-        cv2.rectangle(img_draw, (x1, y1), (x2, y2), color, 2)
-        cv2.putText(img_draw, f"{cls_name} {score:.2f}", (x1, y1 - 8),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.55, color, 2)
+        draw = ImageDraw.Draw(img_draw)
+
+        draw.rectangle(
+            [x1, y1, x2, y2],
+            outline=color,
+            width=2
+        )
+        
+        draw.text(
+            (x1, max(0, y1 - 10)),
+            f"{cls_name} {score:.2f}",
+            fill=color
+        )
 
     detections.sort(key=lambda d: d["conf"], reverse=True)
     annotated = Image.fromarray(img_draw)
