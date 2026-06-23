@@ -4,3 +4,4 @@ opencv-python
 Pillow
 streamlit
 gdown==5.2.0
+opencv-python-headless
