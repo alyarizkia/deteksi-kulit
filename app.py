@@ -21,17 +21,20 @@ def download_models():
     male_model = "models/faster_rcnn_best.pth"
     female_model = "models/faster_rcnn_best_tuned.pth"
 
-    # ganti dengan ID file Google Drive milikmu
-    male_url = "https://drive.google.com/file/d/1MKg7gCsY3Obu9llGV60rpNp6YndACgkC/view?usp=drive_link"
-    female_url = "https://drive.google.com/file/d/1AqUh5AEGEZj2-akzRGkted4CbPxiSuNc/view?usp=drive_link"
+    # pakai FILE ID 
+    male_id = "1MKg7gCsY3Obu9llGV60rpNp6YndACgkC"
+    female_id = "1AqUh5AEGEZj2-akzRGkted4CbPxiSuNc"
+
+    male_url = f"https://drive.google.com/uc?id={male_id}"
+    female_url = f"https://drive.google.com/uc?id={female_id}"
 
     if not os.path.exists(male_model):
         with st.spinner("Mengunduh model laki-laki..."):
-            gdown.download(male_url, male_model, quiet=False, fuzzy=True)
+            gdown.download(male_url, male_model, quiet=False)
 
     if not os.path.exists(female_model):
         with st.spinner("Mengunduh model perempuan..."):
-            gdown.download(female_url, female_model, quiet=False, fuzzy=True)
+            gdown.download(female_url, female_model, quiet=False)
 
 download_models()
 
