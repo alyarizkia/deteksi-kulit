@@ -27,11 +27,11 @@ def download_models():
 
     if not os.path.exists(male_model):
         with st.spinner("Mengunduh model laki-laki..."):
-            gdown.download(male_url, male_model, quiet=False)
+            gdown.download(url, male_model, quiet=False, fuzzy=True)
 
     if not os.path.exists(female_model):
         with st.spinner("Mengunduh model perempuan..."):
-            gdown.download(female_url, female_model, quiet=False)
+            gdown.download(url, female_model, quiet=False, fuzzy=True)
 
 download_models()
 
