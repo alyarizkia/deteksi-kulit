@@ -22,8 +22,8 @@ def download_models():
     female_model = "models/faster_rcnn_best_tuned.pth"
 
     # ganti dengan ID file Google Drive milikmu
-    male_url = "https://drive.google.com/file/d/1MKg7gCsY3Obu9llGV60rpNp6YndACgkC/view?usp=sharing"
-    female_url = "https://drive.google.com/file/d/1AqUh5AEGEZj2-akzRGkted4CbPxiSuNc/view?usp=sharing"
+    male_url = "https://drive.google.com/file/d/1MKg7gCsY3Obu9llGV60rpNp6YndACgkC/view?usp=drive_link"
+    female_url = "https://drive.google.com/file/d/1AqUh5AEGEZj2-akzRGkted4CbPxiSuNc/view?usp=drive_link"
 
     if not os.path.exists(male_model):
         with st.spinner("Mengunduh model laki-laki..."):
