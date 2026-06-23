@@ -3,4 +3,4 @@ torchvision
 opencv-python
 Pillow
 streamlit
-gdown
+gdown==5.2.0
