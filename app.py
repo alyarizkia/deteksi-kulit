@@ -292,7 +292,11 @@ def load_model(gender: str):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    checkpoint = torch.load(path, map_location=device)
+    checkpoint = torch.load(
+        path,
+        map_location=device,
+        weights_only=False
+    )
 
     # Coba deteksi otomatis: state dict atau full model
     if isinstance(checkpoint, dict) and ("model_state_dict" in checkpoint or any(k.startswith("backbone") for k in checkpoint.keys())):
