@@ -352,7 +352,7 @@ def run_inference(model, image: Image.Image):
         outputs = model(img_tensor)[0]
 
     detections = []
-    img_draw = np.array(img_rgb).copy()
+    img_draw = img_rgb.copy()
 
     boxes  = outputs["boxes"]
     scores = outputs["scores"]
