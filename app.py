@@ -336,15 +336,15 @@ def get_bar_color(class_name: str) -> str:
             return color
     return "#7c6fff"
 
-
 def run_inference(model, image: Image.Image):
     import torch
     import torchvision.transforms.functional as F
     from PIL import ImageDraw
-    import numpy as np
     from torchvision.ops import nms
 
     device = next(model.parameters()).device
+
+    # PIL → tensor
     img_rgb = image.convert("RGB")
     img_tensor = F.to_tensor(img_rgb).unsqueeze(0).to(device)
 
@@ -352,44 +352,50 @@ def run_inference(model, image: Image.Image):
         outputs = model(img_tensor)[0]
 
     detections = []
+
+    # IMPORTANT: tetap pakai PIL image untuk drawing
     img_draw = img_rgb.copy()
+    draw = ImageDraw.Draw(img_draw)
 
     boxes  = outputs["boxes"]
     scores = outputs["scores"]
     labels = outputs["labels"]
 
-    # Filter confidence dulu
+    # Filter confidence
     keep_conf = scores >= CONF_THRESHOLD
     boxes, scores, labels = boxes[keep_conf], scores[keep_conf], labels[keep_conf]
 
-    # Lalu NMS
+    # NMS
     keep_nms = nms(boxes, scores, iou_threshold=IOU_THRESHOLD)
-    boxes  = boxes[keep_nms]
-    scores = scores[keep_nms]
-    labels = labels[keep_nms]
+    boxes, scores, labels = boxes[keep_nms], scores[keep_nms], labels[keep_nms]
 
-    for i in range(len(outputs["boxes"])):
-        score = float(outputs["scores"][i])
-        if score < CONF_THRESHOLD:
-            continue
+    for i in range(len(boxes)):
+        score = float(scores[i])
+        cls_id = int(labels[i])
 
-        cls_id   = int(outputs["labels"][i])
-        cls_name = CLASS_NAMES[st.session_state.gender][cls_id - 1]  # -1 karena index 0 = background
-        bbox     = outputs["boxes"][i].tolist()  # [x1, y1, x2, y2]
+        cls_name = CLASS_NAMES[st.session_state.gender][cls_id - 1]
+        bbox = boxes[i].tolist()
 
-        detections.append({"class": cls_name, "conf": score, "bbox": bbox})
+        detections.append({
+            "class": cls_name,
+            "conf": score,
+            "bbox": bbox
+        })
 
-        # Gambar bounding box manual
-        color = tuple(int(get_bar_color(cls_name).lstrip("#")[i:i+2], 16) for i in (0, 2, 4))
+        # warna hex → RGB
+        color = tuple(
+            int(get_bar_color(cls_name).lstrip("#")[j:j+2], 16)
+            for j in (0, 2, 4)
+        )
+
         x1, y1, x2, y2 = map(int, bbox)
-        draw = ImageDraw.Draw(img_draw)
 
         draw.rectangle(
             [x1, y1, x2, y2],
             outline=color,
             width=2
         )
-        
+
         draw.text(
             (x1, max(0, y1 - 10)),
             f"{cls_name} {score:.2f}",
@@ -397,7 +403,8 @@ def run_inference(model, image: Image.Image):
         )
 
     detections.sort(key=lambda d: d["conf"], reverse=True)
-    annotated = Image.fromarray(img_draw)
+
+    annotated = img_draw   
     return annotated, detections
 
 
