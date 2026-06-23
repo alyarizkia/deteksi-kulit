@@ -340,7 +340,7 @@ def get_bar_color(class_name: str) -> str:
 def run_inference(model, image: Image.Image):
     import torch
     import torchvision.transforms.functional as F
-    import cv2
+    import opencv-python-headless
     import numpy as np
     from torchvision.ops import nms
 
