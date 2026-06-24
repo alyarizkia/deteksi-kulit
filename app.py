@@ -19,11 +19,11 @@ def download_models():
     os.makedirs("models", exist_ok=True)
 
     male_model = "models/faster_rcnn_best.pth"
-    female_model = "models/best.pt"
+    female_model = "models/faster_rcnn_best_tuned.pth"
 
     # pakai FILE ID 
     male_id = "1MKg7gCsY3Obu9llGV60rpNp6YndACgkC"
-    female_id = "1UUyV1aGsnBonbjBAGavaQ70l5dvqcYBs"
+    female_id = "1AqUh5AEGEZj2-akzRGkted4CbPxiSuNc"
 
     male_url = f"https://drive.google.com/uc?id={male_id}"
     female_url = f"https://drive.google.com/uc?id={female_id}"
@@ -41,12 +41,7 @@ download_models()
 # CONSTANTS
 MODEL_PATHS = {
     "Male":   "models/faster_rcnn_best.pth",
-    "Female": "models/best.pt",
-}
-
-MODEL_FRAMEWORK = {
-    "Male":   "faster_rcnn",
-    "Female": "yolo",
+    "Female": "models/faster_rcnn_best_tuned.pth",
 }
 
 CLASS_NAMES = {
@@ -287,36 +282,38 @@ for key, default in {
 # HELPERS
 @st.cache_resource(show_spinner=False)
 def load_model(gender: str):
+    import torch
+    import torchvision
+    from torchvision.models.detection import fasterrcnn_resnet50_fpn
     import pathlib
+
     path = MODEL_PATHS[gender]
     if not pathlib.Path(path).exists():
         return None
 
-    if MODEL_FRAMEWORK[gender] == "faster_rcnn":
-        import torch
-        from torchvision.models.detection import fasterrcnn_resnet50_fpn
+    num_classes = len(CLASS_NAMES[gender]) + 1  # +1 untuk background
 
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        checkpoint = torch.load(path, map_location=device, weights_only=False)
-        num_classes = len(CLASS_NAMES[gender]) + 1
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        if isinstance(checkpoint, dict) and (
-            "model_state_dict" in checkpoint or
-            any(k.startswith("backbone") for k in checkpoint.keys())
-        ):
-            model = fasterrcnn_resnet50_fpn(num_classes=num_classes)
-            state_dict = checkpoint.get("model_state_dict", checkpoint)
-            model.load_state_dict(state_dict)
-        else:
-            model = checkpoint
+    checkpoint = torch.load(
+        path,
+        map_location=device,
+        weights_only=False
+    )
 
-        model.to(device)
-        model.eval()
-        return model
+    # Coba deteksi otomatis: state dict atau full model
+    if isinstance(checkpoint, dict) and ("model_state_dict" in checkpoint or any(k.startswith("backbone") for k in checkpoint.keys())):
+        # Ini state dict
+        model = fasterrcnn_resnet50_fpn(num_classes=num_classes)
+        state_dict = checkpoint.get("model_state_dict", checkpoint)
+        model.load_state_dict(state_dict)
+    else:
+        # Ini full model
+        model = checkpoint
 
-    else:  # yolo
-        from ultralytics import YOLO
-        return YOLO(path)
+    model.to(device)
+    model.eval()
+    return model
 
 
 def get_skin_key(class_name: str) -> str:
@@ -339,59 +336,76 @@ def get_bar_color(class_name: str) -> str:
             return color
     return "#7c6fff"
 
-def run_inference(model, image: Image.Image, gender: str):
-    if MODEL_FRAMEWORK[gender] == "faster_rcnn":
-        import torch
-        import torchvision.transforms.functional as F
-        from torchvision.ops import nms
-        from PIL import ImageDraw
+def run_inference(model, image: Image.Image):
+    import torch
+    import torchvision.transforms.functional as F
+    from PIL import ImageDraw
+    from torchvision.ops import nms
 
-        device = next(model.parameters()).device
-        img_rgb = image.convert("RGB")
-        img_tensor = F.to_tensor(img_rgb).unsqueeze(0).to(device)
+    device = next(model.parameters()).device
 
-        with torch.no_grad():
-            outputs = model(img_tensor)[0]
+    # PIL → tensor
+    img_rgb = image.convert("RGB")
+    img_tensor = F.to_tensor(img_rgb).unsqueeze(0).to(device)
 
-        boxes, scores, labels = outputs["boxes"], outputs["scores"], outputs["labels"]
-        keep_conf = scores >= CONF_THRESHOLD
-        boxes, scores, labels = boxes[keep_conf], scores[keep_conf], labels[keep_conf]
-        if len(boxes) > 0:
-            keep_nms = nms(boxes, scores, iou_threshold=IOU_THRESHOLD)
-            boxes, scores, labels = boxes[keep_nms], scores[keep_nms], labels[keep_nms]
+    with torch.no_grad():
+        outputs = model(img_tensor)[0]
 
-        detections = []
-        img_draw = img_rgb.copy()
-        draw = ImageDraw.Draw(img_draw)
+    detections = []
 
-        for i in range(len(boxes)):
-            score    = float(scores[i])
-            cls_id   = int(labels[i])
-            cls_name = CLASS_NAMES[gender][cls_id - 1]
-            bbox     = boxes[i].tolist()
-            color    = tuple(int(get_bar_color(cls_name).lstrip("#")[j:j+2], 16) for j in (0, 2, 4))
-            x1, y1, x2, y2 = map(int, bbox)
-            draw.rectangle([x1, y1, x2, y2], outline=color, width=2)
-            draw.text((x1, max(0, y1 - 10)), f"{cls_name} {score:.2f}", fill=color)
-            detections.append({"class": cls_name, "conf": score, "bbox": bbox})
+    # IMPORTANT: tetap pakai PIL image untuk drawing
+    img_draw = img_rgb.copy()
+    draw = ImageDraw.Draw(img_draw)
 
-    else:  # yolo
-        import numpy as np
-        img_np = np.array(image.convert("RGB"))
-        results = model.predict(source=img_np, conf=CONF_THRESHOLD, iou=IOU_THRESHOLD, verbose=False)
-        result  = results[0]
-        img_draw = Image.fromarray(result.plot())
-        detections = []
-        if result.boxes is not None and len(result.boxes) > 0:
-            for box in result.boxes:
-                cls_id   = int(box.cls[0])
-                cls_name = result.names[cls_id]
-                conf     = float(box.conf[0])
-                xyxy     = box.xyxy[0].tolist()
-                detections.append({"class": cls_name, "conf": conf, "bbox": xyxy})
+    boxes  = outputs["boxes"]
+    scores = outputs["scores"]
+    labels = outputs["labels"]
+
+    # Filter confidence
+    keep_conf = scores >= CONF_THRESHOLD
+    boxes, scores, labels = boxes[keep_conf], scores[keep_conf], labels[keep_conf]
+
+    # NMS
+    keep_nms = nms(boxes, scores, iou_threshold=IOU_THRESHOLD)
+    boxes, scores, labels = boxes[keep_nms], scores[keep_nms], labels[keep_nms]
+
+    for i in range(len(boxes)):
+        score = float(scores[i])
+        cls_id = int(labels[i])
+
+        cls_name = CLASS_NAMES[st.session_state.gender][cls_id - 1]
+        bbox = boxes[i].tolist()
+
+        detections.append({
+            "class": cls_name,
+            "conf": score,
+            "bbox": bbox
+        })
+
+        # warna hex → RGB
+        color = tuple(
+            int(get_bar_color(cls_name).lstrip("#")[j:j+2], 16)
+            for j in (0, 2, 4)
+        )
+
+        x1, y1, x2, y2 = map(int, bbox)
+
+        draw.rectangle(
+            [x1, y1, x2, y2],
+            outline=color,
+            width=2
+        )
+
+        draw.text(
+            (x1, max(0, y1 - 10)),
+            f"{cls_name} {score:.2f}",
+            fill=color
+        )
 
     detections.sort(key=lambda d: d["conf"], reverse=True)
-    return img_draw, detections
+
+    annotated = img_draw   
+    return annotated, detections
 
 
 def build_summary(detections: list) -> dict:
@@ -475,6 +489,7 @@ def page_gender():
         <div class="gender-card {male_active}">
             <div class="gender-icon">👨</div>
             <div class="gender-title">Laki-laki</div>
+            <div class="gender-sub">Model Faster R-CNN — Men</div>
         </div>
         """, unsafe_allow_html=True)
         if st.button("Pilih Laki-laki", key="sel_male", use_container_width=True):
@@ -488,6 +503,7 @@ def page_gender():
         <div class="gender-card {female_active}">
             <div class="gender-icon">👩</div>
             <div class="gender-title">Perempuan</div>
+            <div class="gender-sub">Model Faster R-CNN — Women</div>
         </div>
         """, unsafe_allow_html=True)
         if st.button("Pilih Perempuan", key="sel_female", use_container_width=True):
@@ -578,7 +594,7 @@ def page_detect():
         st.session_state.original_img = image
 
         with st.spinner("Menjalankan deteksi..."):
-            annotated, detections = run_inference(model, image, gender)
+            annotated, detections = run_inference(model, image)
             st.session_state.annotated_img = annotated
             st.session_state.detections    = detections
 
