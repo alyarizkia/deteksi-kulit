@@ -4,3 +4,6 @@ opencv-python
 Pillow
 streamlit
 gdown==5.2.0
+torch
+torchvision
+ultralytics
