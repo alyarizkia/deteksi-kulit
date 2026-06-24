@@ -19,7 +19,7 @@ def download_models():
     os.makedirs("models", exist_ok=True)
 
     male_model = "models/faster_rcnn_best.pth"
-    female_model = "models/best.pth"
+    female_model = "models/best.pt"
 
     # pakai FILE ID 
     male_id = "1MKg7gCsY3Obu9llGV60rpNp6YndACgkC"
@@ -41,7 +41,7 @@ download_models()
 # CONSTANTS
 MODEL_PATHS = {
     "Male":   "models/faster_rcnn_best.pth",
-    "Female": "models/best.pth",
+    "Female": "models/best.pt",
 }
 
 MODEL_FRAMEWORK = {
