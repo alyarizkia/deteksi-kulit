@@ -19,11 +19,11 @@ def download_models():
     os.makedirs("models", exist_ok=True)
 
     male_model = "models/faster_rcnn_best.pth"
-    female_model = "models/faster_rcnn_best_tuned.pth"
+    female_model = "models/best.pth"
 
     # pakai FILE ID 
     male_id = "1MKg7gCsY3Obu9llGV60rpNp6YndACgkC"
-    female_id = "1AqUh5AEGEZj2-akzRGkted4CbPxiSuNc"
+    female_id = "1UUyV1aGsnBonbjBAGavaQ70l5dvqcYBs"
 
     male_url = f"https://drive.google.com/uc?id={male_id}"
     female_url = f"https://drive.google.com/uc?id={female_id}"
