@@ -41,7 +41,7 @@ download_models()
 # CONSTANTS
 MODEL_PATHS = {
     "Male":   "models/faster_rcnn_best.pth",
-    "Female": "models/faster_rcnn_best_tuned.pth",
+    "Female": "models/best.pth",
 }
 
 MODEL_FRAMEWORK = {
