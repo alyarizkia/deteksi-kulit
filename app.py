@@ -475,7 +475,6 @@ def page_gender():
         <div class="gender-card {male_active}">
             <div class="gender-icon">👨</div>
             <div class="gender-title">Laki-laki</div>
-            <div class="gender-sub">Model Faster R-CNN — Men</div>
         </div>
         """, unsafe_allow_html=True)
         if st.button("Pilih Laki-laki", key="sel_male", use_container_width=True):
@@ -489,7 +488,6 @@ def page_gender():
         <div class="gender-card {female_active}">
             <div class="gender-icon">👩</div>
             <div class="gender-title">Perempuan</div>
-            <div class="gender-sub">Model Faster R-CNN — Women</div>
         </div>
         """, unsafe_allow_html=True)
         if st.button("Pilih Perempuan", key="sel_female", use_container_width=True):
